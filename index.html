@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Menú · My Time Salón y Café</title>
+<meta name="description" content="Menú de café, tés y bebidas de temporada de My Time Salón y Café.">
+<meta name="theme-color" content="#FCF4E2">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&display=swap">
+<style>
+  :root {
+    --crema: #FCF4E2;
+    --crema-2: #F6EAD0;
+    --taupe: #B89F84;
+    --terracota: #B5795A;
+    --cafe: #6B5325;
+    --tinta: #2B2420;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--crema); color: var(--tinta); }
+  body {
+    font: 16px/1.5 "Cormorant Garamond", Georgia, "Times New Roman", serif;
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+    -webkit-text-size-adjust: 100%;
+  }
+  header {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 22px 16px 14px;
+  }
+  /* El logo trae fondo blanco: «multiply» lo funde con el crema y deja el dorado intacto. */
+  header img { width: 92px; height: 92px; object-fit: contain; mix-blend-mode: multiply; }
+  header h1 {
+    margin: 0; font-weight: 600; font-size: 30px; letter-spacing: .08em;
+    color: var(--taupe); text-transform: uppercase;
+  }
+  header p { margin: 0; font-size: 15px; color: var(--terracota); font-style: italic; }
+  main { max-width: 760px; margin: 0 auto; padding: 0 12px 8px; display: grid; gap: 12px; }
+  .pagina {
+    width: 100%; display: block; background: #fff;
+    border-radius: 6px; box-shadow: 0 1px 2px rgba(43,36,32,.08), 0 6px 20px rgba(43,36,32,.08);
+  }
+  .estado { text-align: center; color: var(--cafe); padding: 32px 12px; font-size: 18px; }
+  .estado a { color: var(--terracota); }
+  footer {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 18px 16px 28px; color: var(--cafe); font-size: 15px; text-align: center;
+  }
+  .boton {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 44px; padding: 0 22px; border-radius: 999px;
+    background: var(--terracota); color: #fff; text-decoration: none;
+    font: 600 17px/1 "Cormorant Garamond", Georgia, serif; letter-spacing: .03em;
+  }
+  .boton:focus-visible { outline: 3px solid var(--cafe); outline-offset: 3px; }
+  @media (prefers-reduced-motion: no-preference) {
+    .pagina { animation: aparece .35s ease-out both; }
+    @keyframes aparece { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  }
+</style>
+</head>
+<body>
+<header>
+  <img src="logo.png" alt="My Time · Salón y café">
+  <h1>Menú</h1>
+  <p>Café · Tés · Temporada</p>
+</header>
+
+<main id="menu" aria-live="polite">
+  <div class="estado" id="estado">Cargando el menú…</div>
+</main>
+
+<footer>
+  <a class="boton" href="menu.pdf" download="Menu-MyTime.pdf">Descargar el menú (PDF)</a>
+  <span>My Time · Salón y café</span>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  // Muestra las páginas de menu.pdf a lo ancho de la pantalla. Para cambiar el menú basta con
+  // reemplazar menu.pdf: esta página y el QR no cambian.
+  // La página 1 del PDF es la portada («My Time · MENÚ»): aquí la salta porque el encabezado ya
+  // la muestra. Si un PDF nuevo NO trae portada, cambia esto a false.
+  const SALTAR_PORTADA = true;
+  (async function () {
+    const main = document.getElementById("menu");
+    const estado = document.getElementById("estado");
+    const fallo = () => {
+      estado.innerHTML = 'No se pudo mostrar el menú aquí. <a href="menu.pdf">Ábrelo en PDF</a>.';
+    };
+    if (!window.pdfjsLib) return fallo();
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    try {
+      const pdf = await pdfjsLib.getDocument("menu.pdf").promise;
+      estado.remove();
+      const ratio = Math.min(window.devicePixelRatio || 1, 2.5);
+      const primera = SALTAR_PORTADA && pdf.numPages > 1 ? 2 : 1;
+      for (let n = primera; n <= pdf.numPages; n++) {
+        const page = await pdf.getPage(n);
+        const ancho = main.clientWidth || 360;
+        const base = page.getViewport({ scale: 1 });
+        const viewport = page.getViewport({ scale: (ancho / base.width) * ratio });
+        const canvas = document.createElement("canvas");
+        canvas.className = "pagina";
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+        canvas.setAttribute("role", "img");
+        canvas.setAttribute("aria-label", "Menú, página " + n + " de " + pdf.numPages);
+        main.appendChild(canvas);
+        await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+      }
+    } catch (e) {
+      fallo();
+    }
+  })();
+</script>
+</body>
+</html>
